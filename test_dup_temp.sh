@@ -29,12 +29,6 @@
 # To simplify tests,
 # move command is changed to 'mv' from 'mv -n' (by arg '--mv-cmd')
 # copy command is changed to 'cp' from 'cp -n' (by arg '--cp-cmd')
-#
-# To simplify tests,
-# timestamps are the same for each hashes.
-# But of cource there are cases
-# when mulltiple files are with the same hashes and different timestamps
-# In those cases, I'm not sure we are able to 'touch' (fix timestamps) them.
 
 
 set -euo pipefail
@@ -130,12 +124,23 @@ for d in $DATA; do
 
     pushd test-root-tmp/target/folder > /dev/null
     for (( i=4; i<8; i++ )); do
+        j=$(($i-3))
         n=${d:i:1}
         filename=file$(($i-2))
-        if [ $n == 0 ]; then
-            echo zero > $filename; touch -t 202201010100 $filename
+
+        if [ ${d:i:1} == ${d:j:1} ]; then  # same filename and same hash, so same timestamp
+            if [ $n == 0 ]; then
+                echo zero > $filename; touch -t 202201010100 $filename
+            else
+                echo one > $filename;  touch -t 202201010101 $filename
+            fi
         else
-            echo one > $filename; touch -t 202201010101 $filename
+            timestamp=$((202201010000+i))
+            if [ $n == 0 ]; then
+                echo zero > $filename; touch -t $timestamp $filename
+            else
+                echo one > $filename; touch -t $timestamp $filename
+            fi
         fi
     done
     popd > /dev/null

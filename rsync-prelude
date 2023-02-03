@@ -242,6 +242,8 @@ def resolve_moves(args, src_files: Dict[str, FileInfo], dst_files: Dict[str, Fil
         else:
             ret_pre.append([args.mv_cmd, src_path, trg_path + "_tmp"])
             ret_post.append([args.mv_cmd, trg_path + "_tmp", trg_path])
+        timestamp = src_files[trg_path].timestamp.strftime("%Y%m%d%H%M.%S")
+        ret_post.append(["touch", timestamp, trg_path])
 
         for trg_copy in copies:
             if trg_copy in dst_files:
