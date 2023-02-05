@@ -176,10 +176,7 @@ def dst_cmd(args, cmd: str, arg1: str, arg2: str) -> str:
 
 # ----
 
-def keep_with_hashsum(info_dict: Dict[str, FileInfo]) -> Dict[str, FileInfo]:
-    return { k: v for k, v in info_dict.items() if v.hashsum }
-
-def classify_paths(src_files: Dict[str, FileInfo], dst_files: Dict[str, FileInfo]) -> Tuple[Set[str], Set[str], Set[str]]:
+def classify_paths(args, src_files: Dict[str, FileInfo], dst_files: Dict[str, FileInfo]) -> Tuple[Set[str], Set[str], Set[str]]:
     added, removed, modified = set(), set(), set()
     for path in set.union(set(src_files.keys()), set(dst_files.keys())):
         in_src, in_trg = path in src_files, path in dst_files
@@ -200,6 +197,21 @@ def classify_paths(src_files: Dict[str, FileInfo], dst_files: Dict[str, FileInfo
 
             if diff_size or diff_dirfile:
                 modified.add(path)
+
+    for path in set.union(added, modified):
+        src = src_files[path]
+        if src.is_dir or src.hashsum:
+            if args.verbose:
+                print(f"{path}: skip (dir or unique file size)")
+            continue
+        src.hashsum = hashsum(args, path, is_src=True)
+    for path in set.union(removed, modified):
+        dst = dst_files[path]
+        if dst.is_dir or dst.hashsum:
+            if args.verbose:
+                print(f"{path}: skip (dir or unique file size)")
+            continue
+        dst.hashsum = hashsum(args, path, is_src=False)
 
     return (added, modified, removed)
 
@@ -280,25 +292,8 @@ def compute_moves(args) -> List[List[str]]:
 
     # get hashsums for files that might have been moved (will compute hashsum for these)
     # these are files that exist only in src/dest or that look modified (diff. size)
-    c_add, c_mod, c_rem = classify_paths(src_files, dst_files)
-    for path in set.union(c_add, c_mod):
-        src = src_files[path]
-        if src.is_dir or src.hashsum:
-            if args.verbose:
-                print(f"{path}: skip (dir or unique file size)")
-            continue
-        src.hashsum = hashsum(args, path, is_src=True)
-    for path in set.union(c_rem, c_mod):
-        dst = dst_files[path]
-        if dst.is_dir or dst.hashsum:
-            if args.verbose:
-                print(f"{path}: skip (dir or unique file size)")
-            continue
-        dst.hashsum = hashsum(args, path, is_src=False)
+    add, mod, rem = classify_paths(args, src_files, dst_files)
 
-    # now do re-classification for remaining candidates with hashsum
-    src_files, dst_files = keep_with_hashsum(src_files), keep_with_hashsum(dst_files)
-    add, mod, rem = classify_paths(src_files, dst_files)
     return resolve_moves(args, src_files, dst_files, add, mod, rem)
 
 # ----
