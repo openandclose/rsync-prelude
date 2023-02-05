@@ -197,11 +197,8 @@ def classify_paths(src_files: Dict[str, FileInfo], dst_files: Dict[str, FileInfo
             # is very small -> almost as good as hashsum to detect difference
             # for small files does not matter, they can be transferred fast anyway
             diff_size = src_file.size != dst_file.size
-            # different hashsum -> different file with very high likelihood
-            both_hsum = src_file.hashsum and dst_file.hashsum
-            diff_hsum = both_hsum and src_file.hashsum != dst_file.hashsum
 
-            if diff_size or diff_dirfile or diff_hsum:
+            if diff_size or diff_dirfile:
                 modified.add(path)
 
     return (added, modified, removed)
