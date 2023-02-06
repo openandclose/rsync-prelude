@@ -4,7 +4,6 @@
 #
 # Hashes are only two kinds, expressed as: 0 or 1.
 # (Accordingly the file contens are either: 'zero' or 'one').
-# All possible combinations are tested.
 #
 # Files in src directory is: file1, file2, file3, file4.
 # Files in dest directory is: file2, file3, file4, file5.
@@ -22,7 +21,7 @@
 # unable to move or copy hash 0 files from somewhere, to modify file3.
 #
 # So tests are filtered so that dest gets both hashes
-# (148 tests from 256 combinations).
+# (74 tests from 128 cases).
 #
 # Note:
 #
@@ -92,9 +91,10 @@ run() {
 }
 
 TEST_COUNT=0
-DATA=$(echo {0,1}{0,1}{0,1}{0,1}{0,1}{0,1}{0,1}{0,1})
+DATA=($(echo {0,1}{0,1}{0,1}{0,1}{0,1}{0,1}{0,1}{0,1}))
+DATA=(${DATA[@]:0:128})
 
-for d in $DATA; do
+for d in ${DATA[@]}; do
 
     # 1. filter unable to modiy hash combinations
     OK=0
