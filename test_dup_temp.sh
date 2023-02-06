@@ -34,6 +34,13 @@
 set -euo pipefail
 IFS=$' \n\t'
 
+RSYNC_PRELUDE="$(pwd)/rsync-prelude"
+
+# Specify environment variable 'RSYNC_PRELUDE_TEST_TEMPDIR', if necessary
+TEMPDIR=${RSYNC_PRELUDE_TEST_TEMPDIR:=/tmp/rsync-prelude-test}
+mkdir -p $TEMPDIR
+cd $TEMPDIR
+
 if [ -e test-root-tmp/source ]; then
     chmod -R +w test-root-tmp/source
     rm -r test-root-tmp
@@ -84,7 +91,6 @@ run() {
     fi
 }
 
-RSYNC_PRELUDE="$(pwd)/rsync-prelude"
 TEST_COUNT=0
 DATA=$(echo {0,1}{0,1}{0,1}{0,1}{0,1}{0,1}{0,1}{0,1})
 
