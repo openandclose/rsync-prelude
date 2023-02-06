@@ -9,7 +9,7 @@
 # Files in src directory is: file1, file2, file3, file4.
 # Files in dest directory is: file2, file3, file4, file5.
 # So after running rsync-prelude, in dest directory,
-# file1 will be added, file5 removed, and file2-4 moved to fix hashes.
+# file1 will be added, file5 removed, and file2-4 moved to fix hashes, if necessary.
 #
 # Some combinations are unable to be fixed. E.g.
 #
@@ -17,8 +17,8 @@
 # src   0       0       0       1
 # dest          0       1       1       1
 #
-# file2 and file4 are the same hashes, so their hash calculations are skipped,
-# so dest gets hashs from file3 and file5, that is, only 1,
+# file2 and file4 are the same sizes, so their hash calculations are skipped,
+# so dest gets hashs from file3 and file5, that is, only hash 1,
 # unable to move or copy hash 0 files from somewhere, to modify file3.
 #
 # So tests are filtered so that dest gets both hashes
