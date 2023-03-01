@@ -109,31 +109,9 @@ def rsync_list(args, dir: str) -> Dict[str, FileInfo]:
 
 def hashsum(args, path: str, is_src: bool=True) -> Optional[str]:
     """Compute hashsum of a file (at source or target)."""
-    root = args.SRC if is_src else args.DEST
-    is_local = root.split("/")[0].find(":") < 0
-
-    if is_local:
-        cmd_pref = ""
-        if root.endswith("/"):
-            filepath = f"{root}{path}"
-        else:
-            if is_src:
-                filepath = str(Path(root).parent / path)
-            else:
-                filepath = f"{root}/{path}"
-    else:
-        remote_host, remote_dir = root.split(":", maxsplit=1)
-        cmd_pref = f"{args.rsh} {remote_host} "
-        if root.endswith("/"):
-            filepath = f"{remote_dir}{path}"
-        else:
-            if is_src:
-                filepath = str(Path(remote_dir).parent / path)
-            else:
-                filepath = f"{remote_dir}/{path}"
-    cmd = f"{args.hash_tool} {quote(filepath)}"
-    if not is_local:
-        cmd = f"{cmd_pref} {quote(cmd)}"
+    root: str = args.SRC if is_src else args.DEST
+    filepath = fullpath(root, path, is_src)
+    cmd = wrap_cmd(args, root, f"{args.hash_tool} {quote(filepath)}")
 
     ret = run(cmd, check=False)
     if not ret:
@@ -164,13 +142,16 @@ def get_host_and_root(root: str) -> Tuple[str]:
     else:
         return root.split(":", maxsplit=1)
 
-def fullpath(root: str, path: str) -> str:
+def fullpath(root: str, path: str, is_src: bool=False) -> str:
     remote_host: str
     remote_host, root = get_host_and_root(root)
     if root.endswith("/"):
         return f"{root}{path}"
     else:
-        return f"{root}/{path}"
+        if is_src:
+            return str(Path(root).parent / path)
+        else:
+            return f"{root}/{path}"
 
 def wrap_cmd(args, root: str, cmd: str) -> str:
     remote_host: str
