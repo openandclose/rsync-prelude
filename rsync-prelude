@@ -143,36 +143,43 @@ def hashsum(args, path: str, is_src: bool=True) -> Optional[str]:
 
 def dst_cmd(args, cmd: str, arg1: str, arg2: str) -> str:
     root: str = args.DEST
-    is_local: bool = root.split("/")[0].find(":") < 0
-
-    if not is_local:
-        remote_host: str
-        remote_host, root = root.split(":", maxsplit=1)
-
-    def wrap_cmd(cmd: str) -> str:
-        if is_local:
-            return cmd
-        else:
-            cmd_pref = f"{args.rsh} {remote_host} "
-            return f"{cmd_pref} {quote(cmd)}"
-
-    def fullpath(path: str) -> str:
-        if root.endswith("/"):
-            return f"{root}{path}"
-        else:
-            return f"{root}/{path}"
-
     if cmd == "touch":
         timestamp = arg1
         trg_path = arg2
-        trg = fullpath(trg_path)
-        return wrap_cmd(f"touch -c -t {timestamp} {quote(trg)}")
+        trg = fullpath(root, trg_path)
+        command = f"touch -c -t {timestamp} {quote(trg)}"
+        return wrap_cmd(args, root, command)
     else:
         src_path = arg1
         trg_path = arg2
-        src, trg = fullpath(src_path), fullpath(trg_path)
+        src, trg = fullpath(root, src_path), fullpath(root, trg_path)
         trgdir = "/".join(trg.split("/")[:-1]) or "."
-        return wrap_cmd(f"mkdir -p {quote(trgdir)} && {cmd} {quote(src)} {quote(trg)}")
+        command = f"mkdir -p {quote(trgdir)} && {cmd} {quote(src)} {quote(trg)}"
+        return wrap_cmd(args, root, command)
+
+def get_host_and_root(root: str) -> Tuple[str]:
+    is_local: bool = root.split("/")[0].find(":") < 0
+    if is_local:
+        return '', root
+    else:
+        return root.split(":", maxsplit=1)
+
+def fullpath(root: str, path: str) -> str:
+    remote_host: str
+    remote_host, root = get_host_and_root(root)
+    if root.endswith("/"):
+        return f"{root}{path}"
+    else:
+        return f"{root}/{path}"
+
+def wrap_cmd(args, root: str, cmd: str) -> str:
+    remote_host: str
+    remote_host, root = get_host_and_root(root)
+    if not remote_host:
+        return cmd
+    else:
+        cmd_pref = f"{args.rsh} {remote_host} "
+        return f"{cmd_pref} {quote(cmd)}"
 
 # ----
 
