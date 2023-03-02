@@ -135,12 +135,13 @@ def dst_cmd(args, cmd: str, arg1: str, arg2: str) -> str:
         command = f"mkdir -p {quote(trgdir)} && {cmd} {quote(src)} {quote(trg)}"
         return wrap_cmd(args, root, command)
 
-def get_host_and_root(root: str) -> Tuple[str]:
+def get_host_and_root(root: str) -> Tuple[str, str]:
     is_local: bool = root.split("/")[0].find(":") < 0
     if is_local:
         return '', root
     else:
-        return root.split(":", maxsplit=1)
+        remote_host, root = root.split(":", maxsplit=1)
+        return remote_host, root
 
 def fullpath(root: str, path: str, is_src: bool=False) -> str:
     remote_host: str
