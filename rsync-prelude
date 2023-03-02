@@ -107,6 +107,10 @@ def rsync_list(args, dir: str) -> Dict[str, FileInfo]:
         ret[path] = FileInfo(Path(path).name, permissions, sz, timestamp, hashsum=None)
     return ret
 
+def rsync_lists(args) -> Tuple[Dict[str, FileInfo], Dict[str, FileInfo]]:
+    DST = get_rsync_dest(args)
+    return rsync_list(args, args.SRC), rsync_list(args, DST)
+
 def hashsum(args, path: str, is_src: bool=True) -> Optional[str]:
     """Compute hashsum of a file (at source or target)."""
     root: str = args.SRC if is_src else args.DEST
@@ -134,6 +138,21 @@ def dst_cmd(args, cmd: str, arg1: str, arg2: str) -> str:
         trgdir = "/".join(trg.split("/")[:-1]) or "."
         command = f"mkdir -p {quote(trgdir)} && {cmd} {quote(src)} {quote(trg)}"
         return wrap_cmd(args, root, command)
+
+# ----
+
+def get_rsync_dest(args) -> str:
+    if args.SRC.endswith("/"):
+        if args.DEST.endswith("/"):
+            DST = f"{args.DEST}"
+        else:
+            DST = f"{args.DEST}/"
+    else:
+        if args.DEST.endswith("/"):
+            DST = f"{args.DEST}{args.SRC.split('/')[-1]}"
+        else:
+            DST = f"{args.DEST}/{args.SRC.split('/')[-1]}"
+    return DST
 
 def get_host_and_root(root: str) -> Tuple[str, str]:
     is_local: bool = root.split("/")[0].find(":") < 0
@@ -254,17 +273,7 @@ def resolve_moves(args, src_files: Dict[str, FileInfo], dst_files: Dict[str, Fil
 
 def compute_moves(args) -> List[List[str]]:
     # get list of candidates both locally and on remote
-    if args.SRC.endswith("/"):
-        if args.DEST.endswith("/"):
-            DST = f"{args.DEST}"
-        else:
-            DST = f"{args.DEST}/"
-    else:
-        if args.DEST.endswith("/"):
-            DST = f"{args.DEST}{args.SRC.split('/')[-1]}"
-        else:
-            DST = f"{args.DEST}/{args.SRC.split('/')[-1]}"        
-    src_files, dst_files = rsync_list(args, args.SRC), rsync_list(args, DST)
+    src_files, dst_files = rsync_lists(args)
 
     # figure out which file size is unique
     sizes: Dict[int, Set[str]] = {} # size -> filename
