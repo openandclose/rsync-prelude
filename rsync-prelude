@@ -90,7 +90,8 @@ class FileInfo:
     filename: str
     permissions: str
     size: int
-    timestamp: datetime
+    date: str
+    time: str
 
     # for candidates:
     # additionally computed hashsum, or the size if it is unique in file set
@@ -99,6 +100,11 @@ class FileInfo:
     @property
     def is_dir(self) -> bool:
         return self.permissions[0] == "d"
+
+    @property
+    def timestamp(self) -> str:
+        t = datetime.strptime(f"{self.date} {self.time}", '%Y/%m/%d %H:%M:%S')
+        return t.strftime("%Y%m%d%H%M.%S")
 
 
 @dataclass
@@ -148,10 +154,8 @@ def rsync_list(args, dir: str) -> Dict[str, FileInfo]:
     lines = output.decode("utf-8").splitlines()
     parsed = [l.split(maxsplit=4) for l in lines]
     ret = {}
-    for permissions, size, date, time, path in parsed:
-        sz = int(size)
-        timestamp = datetime.strptime(f"{date} {time}", '%Y/%m/%d %H:%M:%S')
-        ret[path] = FileInfo(Path(path).name, permissions, sz, timestamp, hashsum=None)
+    for perm, size, date, time, path in parsed:
+        ret[path] = FileInfo(Path(path).name, perm, int(size), date, time, hashsum=None)
     return ret
 
 def hashsum(args, root, path: str) -> Optional[str]:
@@ -287,14 +291,14 @@ def resolve_moves(files: Files, diffs: Diffs) -> List[List[str]]:
         else:
             ret_pre.append([args.mv_cmd, src_path, trg_path + "_tmp"])
             ret_post.append([args.mv_cmd, trg_path + "_tmp", trg_path])
-        timestamp = src_files[trg_path].timestamp.strftime("%Y%m%d%H%M.%S")
+        timestamp = src_files[trg_path].timestamp
         ret_post.append(["touch", timestamp, trg_path])
 
         for trg_copy in copies:
             if trg_copy in dst_files:
                 ret_pre.append([args.mv_cmd, trg_copy, trg_copy + "_old"])
             ret_post.append([args.cp_cmd, trg_path, trg_copy])
-            timestamp = src_files[trg_copy].timestamp.strftime("%Y%m%d%H%M.%S")
+            timestamp = src_files[trg_copy].timestamp
             ret_post.append(["touch", timestamp, trg_copy])
     # return sequence of shell commands in correct order
     return ret_direct + ret_pre + ret_post
