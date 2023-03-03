@@ -38,11 +38,18 @@ def arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("_dest")
     return parser
 
+def verify_args(args) -> None:
+    for root in (args._src, args._dest):
+        if "::" in root.split("/")[0]:
+            raise ValueError("'::' syntax is not supported.")
+
 def main() -> None:
     global verbose
 
     args = arg_parser().parse_args()
     verbose = args.verbose
+
+    verify_args(args)
 
     # Ensure last slashes of src and dest
     normalize_root(args)
