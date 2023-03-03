@@ -30,15 +30,9 @@
 # copy command is changed to 'cp' from 'cp -n' (by arg '--cp-cmd')
 
 
-set -euo pipefail
+source testhelper.sh
 IFS=$' \n\t'
 
-RSYNC_PRELUDE="$(pwd)/rsync-prelude"
-
-# Specify environment variable 'RSYNC_PRELUDE_TEST_TEMPDIR', if necessary
-TEMPDIR=${RSYNC_PRELUDE_TEST_TEMPDIR:=/tmp/rsync-prelude-test}
-mkdir -p $TEMPDIR
-cd $TEMPDIR
 
 if [ -e test-root-tmp/source ]; then
     chmod -R +w test-root-tmp/source

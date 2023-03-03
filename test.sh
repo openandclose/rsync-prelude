@@ -1,6 +1,6 @@
 #!/bin/bash
-set -euo pipefail
-IFS=$'\n\t'
+
+source testhelper.sh
 
 run() {
     test_id="$1"
@@ -37,7 +37,7 @@ run() {
 
     cp -r --preserve=timestamps test-root-tmp/source test-root-tmp/target
 
-    sleep 2
+    sleep $SLEEPTIME
 
     pushd test-root-tmp/source/folder > /dev/null
     mv -n file1 file1-renamed
@@ -55,7 +55,7 @@ run() {
 
     chmod -R -w test-root-tmp/source
 
-    sleep 2
+    sleep $SLEEPTIME
 
     pushd "${test_dir}" > /dev/null
     if [ "${test_script}" = "y" ]; then
@@ -87,7 +87,6 @@ run() {
     fi
 }
 
-RSYNC_PRELUDE="$(pwd)/rsync-prelude"
 
 run  1 n "."                  "test-root-tmp/source/folder"                  "test-root-tmp/target" -q
 run  2 n "."                  "test-root-tmp/source/folder" "localhost:$(pwd)/test-root-tmp/target" -q
