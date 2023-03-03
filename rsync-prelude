@@ -57,10 +57,12 @@ def main() -> None:
     # get list of candidates both locally and on remote
     src_files, dst_files = rsync_list(args, args.SRC), rsync_list(args, args.DEST)
 
+    files = Files(args, src_files, dst_files)
+
     if verbose:
         print("---- find moved/renamed files: ----")
 
-    moves = compute_moves(args, src_files, dst_files)
+    moves = compute_moves(files)
 
     if verbose:
         print("-------- required actions: --------")
@@ -97,6 +99,35 @@ class FileInfo:
     @property
     def is_dir(self) -> bool:
         return self.permissions[0] == "d"
+
+
+@dataclass
+class Files:
+    args: argparse.Namespace
+    src: Dict[str, FileInfo]
+    dest: Dict[str, FileInfo]
+
+    def unpack(self):
+        return self.args, self.src, self.dest
+
+    def hash_to_path(self, fileinfos) -> Dict[str, List[str]]:
+        ret: Dict[str, List[str]] = {}
+        for p, i in fileinfos.items():
+            if i.hashsum is None:
+                continue
+            if i.hashsum not in ret:
+                ret[i.hashsum] = []
+            ret[i.hashsum].append(p)
+        return ret
+
+
+@dataclass
+class Diffs:
+    added: Set[str]
+    modified: Set[str]
+    removed: Set[str]
+
+# ----
 
 def run(cmd: str, check: bool=True) -> bytes:
     """Run command and return standard output."""
@@ -186,7 +217,9 @@ def wrap_cmd(args, root: str, cmd: str) -> str:
 
 # ----
 
-def classify_paths(args, src_files: Dict[str, FileInfo], dst_files: Dict[str, FileInfo]) -> Tuple[Set[str], Set[str], Set[str]]:
+def classify_paths(files: Files) -> Diffs:
+    args, src_files, dst_files = files.unpack()
+
     added, removed, modified = set(), set(), set()
     for path in set.union(set(src_files.keys()), set(dst_files.keys())):
         in_src, in_trg = path in src_files, path in dst_files
@@ -223,24 +256,17 @@ def classify_paths(args, src_files: Dict[str, FileInfo], dst_files: Dict[str, Fi
             continue
         dst.hashsum = hashsum(args, args.DEST, path)
 
-    return (added, modified, removed)
+    return Diffs(added, modified, removed)
 
 
-def hash_to_path_dict(fileinfos: Dict[str, FileInfo]) -> Dict[str, List[str]]:
-    ret: Dict[str, List[str]] = {}
-    for p, i in fileinfos.items():
-        if i.hashsum is None:
-            continue
-        if i.hashsum not in ret:
-            ret[i.hashsum] = []
-        ret[i.hashsum].append(p)
-    return ret
+def resolve_moves(files: Files, diffs: Diffs) -> List[List[str]]:
+    args, src_files, dst_files = files.unpack()
+    added, modified, removed = diffs.added, diffs.modified, diffs.removed
 
-
-def resolve_moves(args, src_files: Dict[str, FileInfo], dst_files: Dict[str, FileInfo], added: Set[str], modified: Set[str], removed: Set[str]) -> List[List[str]]:
     # reverse lookup of paths by hashsum
-    h_to_src_file = hash_to_path_dict(src_files)
-    h_to_trg_file = hash_to_path_dict(dst_files)
+    h_to_src_file = files.hash_to_path(src_files)
+    h_to_trg_file = files.hash_to_path(dst_files)
+
     # get hashsums of files that were possibly moved:
     # hashsums of new or mod paths in source
     src_hsums = {src_files[p].hashsum for p in set.union(added, modified)}
@@ -273,7 +299,9 @@ def resolve_moves(args, src_files: Dict[str, FileInfo], dst_files: Dict[str, Fil
     # return sequence of shell commands in correct order
     return ret_direct + ret_pre + ret_post
 
-def compute_moves(args, src_files: Dict[str, FileInfo], dst_files: Dict[str, FileInfo]) -> List[List[str]]:
+def compute_moves(files: Files) -> List[List[str]]:
+    _, src_files, dst_files = files.unpack()
+
     # figure out which file size is unique
     sizes: Dict[int, Set[str]] = {} # size -> filename
     for path, info in chain(src_files.items(), dst_files.items()):
@@ -289,9 +317,9 @@ def compute_moves(args, src_files: Dict[str, FileInfo], dst_files: Dict[str, Fil
 
     # get hashsums for files that might have been moved (will compute hashsum for these)
     # these are files that exist only in src/dest or that look modified (diff. size)
-    add, mod, rem = classify_paths(args, src_files, dst_files)
+    diffs = classify_paths(files)
 
-    return resolve_moves(args, src_files, dst_files, add, mod, rem)
+    return resolve_moves(files, diffs)
 
 # ----
 
