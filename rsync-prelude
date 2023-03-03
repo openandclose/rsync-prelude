@@ -94,9 +94,9 @@ def run(cmd: str, check: bool=True) -> bytes:
 def rsync_list_cmd(args, dir: str) -> str:
     """Command to list rsync candidate files."""
     if args.rsh == 'ssh' or is_local(dir):
-        return f"rsync {args.filter_args} --list-only {dir}"
+        return f"rsync {args.filter_args} --list-only --no-human-readable {dir}"
     else:
-        return f"rsync {args.filter_args} -e '{args.rsh}' --list-only {dir}"
+        return f"rsync {args.filter_args} -e '{args.rsh}' --list-only --no-human-readable {dir}"
 
 def rsync_list(args, dir: str) -> Dict[str, FileInfo]:
     """Return FileInfo objects for each rsync candidate."""
@@ -105,7 +105,7 @@ def rsync_list(args, dir: str) -> Dict[str, FileInfo]:
     parsed = [l.split(maxsplit=4) for l in lines]
     ret = {}
     for permissions, size, date, time, path in parsed:
-        sz = int(size.replace(".", "").replace(",", ""))
+        sz = int(size)
         timestamp = datetime.strptime(f"{date} {time}", '%Y/%m/%d %H:%M:%S')
         ret[path] = FileInfo(Path(path).name, permissions, sz, timestamp, hashsum=None)
     return ret
