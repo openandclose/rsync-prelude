@@ -47,10 +47,13 @@ def main() -> None:
     # Ensure last slashes of src and dest
     normalize_root(args)
 
+    # get list of candidates both locally and on remote
+    src_files, dst_files = rsync_list(args, args.SRC), rsync_list(args, args.DEST)
+
     if verbose:
         print("---- find moved/renamed files: ----")
 
-    moves = compute_moves(args)
+    moves = compute_moves(args, src_files, dst_files)
 
     if verbose:
         print("-------- required actions: --------")
@@ -264,10 +267,7 @@ def resolve_moves(args, src_files: Dict[str, FileInfo], dst_files: Dict[str, Fil
     # return sequence of shell commands in correct order
     return ret_direct + ret_pre + ret_post
 
-def compute_moves(args) -> List[List[str]]:
-    # get list of candidates both locally and on remote
-    src_files, dst_files = rsync_list(args, args.SRC), rsync_list(args, args.DEST)
-
+def compute_moves(args, src_files: Dict[str, FileInfo], dst_files: Dict[str, FileInfo]) -> List[List[str]]:
     # figure out which file size is unique
     sizes: Dict[int, Set[str]] = {} # size -> filename
     for path, info in chain(src_files.items(), dst_files.items()):
