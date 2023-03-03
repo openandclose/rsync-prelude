@@ -34,8 +34,8 @@ def arg_parser() -> argparse.ArgumentParser:
                         help="Command used to move files")
     parser.add_argument("--cp-cmd", default="cp -n",
                         help="Command used to copy files")
-    parser.add_argument("SRC")
-    parser.add_argument("DEST")
+    parser.add_argument("_src")
+    parser.add_argument("_dest")
     return parser
 
 def main() -> None:
@@ -43,6 +43,9 @@ def main() -> None:
 
     args = arg_parser().parse_args()
     verbose = args.verbose
+
+    # Ensure last slashes of src and dest
+    normalize_root(args)
 
     if verbose:
         print("---- find moved/renamed files: ----")
@@ -110,10 +113,6 @@ def rsync_list(args, dir: str) -> Dict[str, FileInfo]:
         ret[path] = FileInfo(Path(path).name, permissions, sz, timestamp, hashsum=None)
     return ret
 
-def rsync_lists(args) -> Tuple[Dict[str, FileInfo], Dict[str, FileInfo]]:
-    DST = get_rsync_dest(args)
-    return rsync_list(args, args.SRC), rsync_list(args, DST)
-
 def hashsum(args, path: str, is_src: bool=True) -> Optional[str]:
     """Compute hashsum of a file (at source or target)."""
     root: str = args.SRC if is_src else args.DEST
@@ -144,18 +143,13 @@ def dst_cmd(args, cmd: str, arg1: str, arg2: str) -> str:
 
 # ----
 
-def get_rsync_dest(args) -> str:
-    if args.SRC.endswith("/"):
-        if args.DEST.endswith("/"):
-            DST = f"{args.DEST}"
-        else:
-            DST = f"{args.DEST}/"
+def normalize_root(args) -> None:
+    args.SRC = args._src.rstrip("/") + "/"
+    dest = args._dest.rstrip("/") + "/"
+    if args._src.endswith("/"):
+        args.DEST = dest
     else:
-        if args.DEST.endswith("/"):
-            DST = f"{args.DEST}{args.SRC.split('/')[-1]}"
-        else:
-            DST = f"{args.DEST}/{args.SRC.split('/')[-1]}"
-    return DST
+        args.DEST = f"{dest}{args._src.split('/')[-1]}" + "/"
 
 def is_local(root: str) -> bool:
     return root.split("/")[0].find(":") < 0
@@ -170,13 +164,7 @@ def get_host_and_root(root: str) -> Tuple[str, str]:
 def fullpath(root: str, path: str, is_src: bool=False) -> str:
     remote_host: str
     remote_host, root = get_host_and_root(root)
-    if root.endswith("/"):
-        return f"{root}{path}"
-    else:
-        if is_src:
-            return str(Path(root).parent / path)
-        else:
-            return f"{root}/{path}"
+    return f"{root}{path}"
 
 def wrap_cmd(args, root: str, cmd: str) -> str:
     remote_host: str
@@ -278,7 +266,7 @@ def resolve_moves(args, src_files: Dict[str, FileInfo], dst_files: Dict[str, Fil
 
 def compute_moves(args) -> List[List[str]]:
     # get list of candidates both locally and on remote
-    src_files, dst_files = rsync_lists(args)
+    src_files, dst_files = rsync_list(args, args.SRC), rsync_list(args, args.DEST)
 
     # figure out which file size is unique
     sizes: Dict[int, Set[str]] = {} # size -> filename
