@@ -93,7 +93,10 @@ def run(cmd: str, check: bool=True) -> bytes:
 
 def rsync_list_cmd(args, dir: str) -> str:
     """Command to list rsync candidate files."""
-    return f"rsync {args.filter_args} -e '{args.rsh}' --list-only {dir}"
+    if args.rsh == 'ssh' or is_local(dir):
+        return f"rsync {args.filter_args} --list-only {dir}"
+    else:
+        return f"rsync {args.filter_args} -e '{args.rsh}' --list-only {dir}"
 
 def rsync_list(args, dir: str) -> Dict[str, FileInfo]:
     """Return FileInfo objects for each rsync candidate."""
@@ -154,9 +157,11 @@ def get_rsync_dest(args) -> str:
             DST = f"{args.DEST}/{args.SRC.split('/')[-1]}"
     return DST
 
+def is_local(root: str) -> bool:
+    return root.split("/")[0].find(":") < 0
+
 def get_host_and_root(root: str) -> Tuple[str, str]:
-    is_local: bool = root.split("/")[0].find(":") < 0
-    if is_local:
+    if is_local(root):
         return '', root
     else:
         remote_host, root = root.split(":", maxsplit=1)
