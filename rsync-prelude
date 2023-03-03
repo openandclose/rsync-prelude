@@ -123,10 +123,9 @@ def rsync_list(args, dir: str) -> Dict[str, FileInfo]:
         ret[path] = FileInfo(Path(path).name, permissions, sz, timestamp, hashsum=None)
     return ret
 
-def hashsum(args, path: str, is_src: bool=True) -> Optional[str]:
+def hashsum(args, root, path: str) -> Optional[str]:
     """Compute hashsum of a file (at source or target)."""
-    root: str = args.SRC if is_src else args.DEST
-    filepath = fullpath(root, path, is_src)
+    filepath = fullpath(root, path)
     cmd = wrap_cmd(args, root, f"{args.hash_tool} {quote(filepath)}")
 
     ret = run(cmd, check=False)
@@ -171,7 +170,7 @@ def get_host_and_root(root: str) -> Tuple[str, str]:
         remote_host, root = root.split(":", maxsplit=1)
         return remote_host, root
 
-def fullpath(root: str, path: str, is_src: bool=False) -> str:
+def fullpath(root: str, path: str) -> str:
     remote_host: str
     remote_host, root = get_host_and_root(root)
     return f"{root}{path}"
@@ -215,14 +214,14 @@ def classify_paths(args, src_files: Dict[str, FileInfo], dst_files: Dict[str, Fi
             if args.verbose:
                 print(f"{path}: skip (dir or unique file size)")
             continue
-        src.hashsum = hashsum(args, path, is_src=True)
+        src.hashsum = hashsum(args, args.SRC, path)
     for path in set.union(removed, modified):
         dst = dst_files[path]
         if dst.is_dir or dst.hashsum:
             if args.verbose:
                 print(f"{path}: skip (dir or unique file size)")
             continue
-        dst.hashsum = hashsum(args, path, is_src=False)
+        dst.hashsum = hashsum(args, args.DEST, path)
 
     return (added, modified, removed)
 
