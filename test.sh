@@ -121,3 +121,7 @@ run 24 n "." "test-root-tmp/source/" "test-root-tmp/target/" -q --mv-cmd mv
 run 25 n "." "test-root-tmp/source/" "test-root-tmp/target/" -q --mv-cmd 'mv --no-clobber'
 
 run 26 y "." "test-root-tmp/source/" "test-root-tmp/target/" --script
+
+
+
+run 101 n "test-root-tmp/source/folder" ".."  "$(pwd)/test-root-tmp/target"  -q

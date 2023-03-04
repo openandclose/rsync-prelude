@@ -203,7 +203,11 @@ def normalize_root(args) -> None:
     if args._src.endswith("/"):
         args.DEST = dest
     else:
-        args.DEST = f"{dest}{args._src.split('/')[-1]}" + "/"
+        lastdir = args._src.split('/')[-1]
+        if lastdir in ('.', '..'):  # rsync (or shell) treats e.g. '.' as './'
+            args.DEST = dest
+        else:
+            args.DEST = f"{dest}{lastdir}/"
 
 def is_local(root: str) -> bool:
     return root.split("/")[0].find(":") < 0
