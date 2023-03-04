@@ -36,8 +36,8 @@ def arg_parser() -> argparse.ArgumentParser:
                         help="Command used to copy files")
     parser.add_argument("-t", "--no-timestamp", action="store_true",
                         help="Do not fix timestamp for moved or copied files")
-    parser.add_argument("_src")
-    parser.add_argument("_dest")
+    parser.add_argument("_src", metavar="SRC")
+    parser.add_argument("_dest", metavar="DEST")
     return parser
 
 
