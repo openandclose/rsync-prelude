@@ -7,7 +7,6 @@ Copyright (C) 2022 Anton Pirogov, gbabin and Contributors, licensed under the MI
 from itertools import chain
 from typing import List, Dict, Optional, Set, Tuple, Union
 from dataclasses import dataclass
-from pathlib import Path
 from datetime import datetime
 from shlex import quote
 import argparse
@@ -17,7 +16,7 @@ import sys
 
 
 def arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog=Path(__file__).name,
+    parser = argparse.ArgumentParser(prog=__file__.split('/')[-1],
                                      description=__doc__,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-v", "--verbose", action="store_true", default=False)
@@ -98,7 +97,6 @@ def main() -> None:
 @dataclass
 class FileInfo:
     # parsed from output
-    filename: str
     permissions: str
     size: int
     date: str
@@ -165,7 +163,7 @@ def rsync_list(args, dir: str) -> Dict[str, FileInfo]:
     parsed = [l.split(maxsplit=4) for l in lines]
     ret = {}
     for perm, size, date, time, path in parsed:
-        ret[path] = FileInfo(Path(path).name, perm, int(size), date, time, hashsum=None)
+        ret[path] = FileInfo(perm, int(size), date, time, hashsum=None)
     return ret
 
 def hashsum(args, root, path: str) -> Optional[str]:
