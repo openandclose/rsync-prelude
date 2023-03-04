@@ -197,15 +197,15 @@ def dst_cmd(args, cmd: str, arg1: str, arg2: str) -> str:
 
 def normalize_root(args) -> None:
     args.SRC = args._src.rstrip("/") + "/"
-    dest = args._dest.rstrip("/") + "/"
+    DEST = args._dest.rstrip("/") + "/"
     if args._src.endswith("/"):
-        args.DEST = dest
+        args.DEST = DEST
     else:
         lastdir = args._src.split('/')[-1]
         if lastdir in ('.', '..'):  # rsync (or shell) treats e.g. '.' as './'
-            args.DEST = dest
+            args.DEST = DEST
         else:
-            args.DEST = f"{dest}{lastdir}/"
+            args.DEST = f"{DEST}{lastdir}/"
 
 def is_local(root: str) -> bool:
     return root.split("/")[0].find(":") < 0
