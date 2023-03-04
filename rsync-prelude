@@ -35,6 +35,8 @@ def arg_parser() -> argparse.ArgumentParser:
                         help="Command used to move files")
     parser.add_argument("--cp-cmd", default="cp -n",
                         help="Command used to copy files")
+    parser.add_argument("-t", "--no-timestamp", action="store_true",
+                        help="Do not fix timestamp for moved or copied files")
     parser.add_argument("_src")
     parser.add_argument("_dest")
     return parser
@@ -297,15 +299,19 @@ def resolve_moves(files: Files, diffs: Diffs) -> List[List[str]]:
         else:
             ret_pre.append([args.mv_cmd, src_path, trg_path + "_tmp"])
             ret_post.append([args.mv_cmd, trg_path + "_tmp", trg_path])
-        timestamp = src_files[trg_path].timestamp
-        ret_post.append(["touch", timestamp, trg_path])
+
+        if not args.no_timestamp:
+            timestamp = src_files[trg_path].timestamp
+            ret_post.append(["touch", timestamp, trg_path])
 
         for trg_copy in copies:
             if trg_copy in dst_files:
                 ret_pre.append([args.mv_cmd, trg_copy, trg_copy + "_old"])
             ret_post.append([args.cp_cmd, trg_path, trg_copy])
-            timestamp = src_files[trg_copy].timestamp
-            ret_post.append(["touch", timestamp, trg_copy])
+
+            if not args.no_timestamp:
+                timestamp = src_files[trg_copy].timestamp
+                ret_post.append(["touch", timestamp, trg_copy])
     # return sequence of shell commands in correct order
     return ret_direct + ret_pre + ret_post
 
