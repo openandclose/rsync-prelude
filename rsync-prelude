@@ -11,9 +11,10 @@ from pathlib import Path
 from datetime import datetime
 from shlex import quote
 import argparse
+import logging
 import subprocess
+import sys
 
-verbose: bool = False
 
 def arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog=Path(__file__).name,
@@ -38,6 +39,18 @@ def arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("_dest")
     return parser
 
+
+def set_logger(args: argparse.Namespace) -> None:
+    if args.quiet:
+        level = logging.ERROR
+    elif args.verbose:
+        level = logging.INFO
+    else:
+        level = logging.WARNING  # default
+
+    logging.basicConfig(stream=sys.stderr, level=level, format='%(message)s')
+
+
 def verify_args(args) -> None:
     for root in (args._src, args._dest):
         if "::" in root.split("/")[0]:
@@ -47,7 +60,7 @@ def main() -> None:
     global verbose
 
     args = arg_parser().parse_args()
-    verbose = args.verbose
+    set_logger(args)
 
     verify_args(args)
 
@@ -59,28 +72,24 @@ def main() -> None:
 
     files = Files(args, src_files, dst_files)
 
-    if verbose:
-        print("---- find moved/renamed files: ----")
+    logging.info("---- find moved/renamed files: ----")
 
     moves = compute_moves(files)
 
-    if verbose:
-        print("-------- required actions: --------")
+    logging.info("-------- required actions: --------")
 
-        for cmd, src, trg in moves:
-            print(cmd, quote(src), quote(trg))
+    for cmd, src, trg in moves:
+        logging.info(f"{cmd} {quote(src)} {quote(trg)}")
 
-        print("-------- perform  actions: --------")
+    logging.info("-------- perform  actions: --------")
 
     for move in moves:
         cmd = dst_cmd(args, *move)
-        if not args.quiet:
-            print(cmd)  # only omit cmd when asked to; if something goes wrong, it helps debugging
+        logging.warning(f"{cmd}")  # only omit cmd when asked to; if something goes wrong, it helps debugging
         if not args.script:
             run(cmd)
 
-    if verbose:
-        print("-----------------------------------")
+    logging.info("-----------------------------------")
 
 # ----
 
@@ -137,8 +146,7 @@ class Diffs:
 
 def run(cmd: str, check: bool=True) -> bytes:
     """Run command and return standard output."""
-    if verbose:
-        print(f"run: {cmd}")
+    logging.info(f"run: {cmd}")
     return subprocess.run(cmd, shell=True, check=check, capture_output=True).stdout
 
 def rsync_list_cmd(args, dir: str) -> str:
@@ -248,15 +256,13 @@ def classify_paths(files: Files) -> Diffs:
     for path in set.union(added, modified):
         src = src_files[path]
         if src.is_dir or src.hashsum:
-            if args.verbose:
-                print(f"{path}: skip (dir or unique file size)")
+            logging.info(f"{path}: skip (dir or unique file size)")
             continue
         src.hashsum = hashsum(args, args.SRC, path)
     for path in set.union(removed, modified):
         dst = dst_files[path]
         if dst.is_dir or dst.hashsum:
-            if args.verbose:
-                print(f"{path}: skip (dir or unique file size)")
+            logging.info(f"{path}: skip (dir or unique file size)")
             continue
         dst.hashsum = hashsum(args, args.DEST, path)
 

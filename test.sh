@@ -59,7 +59,7 @@ run() {
 
     pushd "${test_dir}" > /dev/null
     if [ "${test_script}" = "y" ]; then
-        "${RSYNC_PRELUDE}" -f ' --recursive' "$@" "${test_src}" "${test_dst}" | bash
+        "${RSYNC_PRELUDE}" -f ' --recursive' "$@" "${test_src}" "${test_dst}" 2>&1 | bash
     else
         "${RSYNC_PRELUDE}" -f ' --recursive' "$@" "${test_src}" "${test_dst}"
     fi
